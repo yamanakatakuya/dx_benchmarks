@@ -1,9 +1,9 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Shiny app to display TB diagnostic benchmarks for selected countries.
-# Takuya Yamanaka, September 2024
+# Takuya Yamanaka, October 2024
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-app_version <- "Version 1.0_alpha"
+app_version <- "Version 2.0_alpha"
 
 ## load packages
 library("shiny")
@@ -14,6 +14,8 @@ library(formattable)
 library(htmlwidgets)
 library(shinythemes)
 library(tidyverse)
+# library(kableExtra)
+library(htmltools)
 
 # selected countries
 select <- c("AO",	"AR",	"AZ",	"BD",	"BY",	"BZ",	"BO",	"BR",	"KH",	"CF",	"CL",	"CN",	"CO",	"CG",	"CR",	"CU",	"KP",	"CD",	"DO",	"EC",	"SV",	"ET",	"GA",	"GT",	"GY",	"HT",	"HN",	"ID",	"JM",	"KE",	"KG",	"LA",	"LS",	"LR",	"MX",	"MN",	"MZ",	"MM",	"NA",	"NP",	"NI",	"NG",	"PK",	"PA",	"PG",	"PY",	"PE",	"PH",	"MD",	"ZA",	"SR",	"TJ",	"TH",	"UG",	"UA",	"TZ",	"UY",	"UZ",	"VE",	"VN",	"ZM",	"ZW")
@@ -59,7 +61,7 @@ ui <-
                  tags$div(
                    class   = "cw-container",
                    checked = NA,
-                   formattableOutput("table"))
+                   htmlOutput("table"))
           )
         ),
         
@@ -217,92 +219,104 @@ server <- function(input, output, session) {
 
   })
   
-  output$table <- renderFormattable({
+  output$table <- renderUI({
     
     dfc <- dfc()
 
     df_table <- dfc %>%
       select(!country:g_whoregion)
     
-    # Custom color_bar function with no bar for NA and 0, and complete bar for 100
-    custom_color_bar <- function(color) {
-      formatter("span",
-                style = function(x) {
-                  ifelse(is.na(x) | x == 0, 
-                         "background-color: transparent;",  # No bar for NA and 0
-                         paste("display: inline-block; direction: rtl; width:", 
-                               percent(x / 100), "; background-color:", color, ";"))
-                })
+    # Color palette for each id
+    color_map <- c("1" = "#064871",  # Color for id 1
+                   "2" = "#DA471F",  # Color for id 2
+                   "3" = "#0096B3",  # Color for id 3
+                   "4" = "#AD176E")  # Color for id 4
+    
+    # Function to format score based on value range
+    format_score <- function(x) {
+      if (is.na(x)) {
+        return(NA)
+      } else if (x >= 10) {
+        return(sprintf("%.0f", x))  # No decimal for scores >= 10
+      } else if (x >= 1| x==0) {
+        return(sprintf("%.1f", x))  # One decimal for scores >= 1 and < 10
+      } else {
+        return(sprintf("%.2f", x))  # Two decimals for scores < 1
+      }
     }
     
-    custom_score_format <- formatter("span",
-                                     style = function(x) {
-                                       ifelse(is.na(x) | x == 0, 
-                                              "background-color: transparent;",  # No bar for NA and 0
-                                              paste("display: inline-block; direction: rtl; width:", 
-                                                    percent(x / 100), "; background-color: lightblue;"))
-                                     },
-                                     x ~ ifelse(x < 10 & !is.na(x), 
-                                                sprintf("%.1f", x),  # Show 1 decimal for values less than 10
-                                                sprintf("%.0f", x))  # Show 0 decimals for values 10 or more
-    )
+    # Format Numerator and Denominator with thousand separators
+    df_table$Numerator <- format(df_table$Numerator, big.mark = " ", scientific = FALSE)
+    df_table$Denominator <- format(df_table$Denominator, big.mark = " ", scientific = FALSE)
     
-    custom_color_bar_by_step <- function(Step, score) {
-      color <- ifelse(Step == 1, "#064871", 
-                      ifelse(Step == 2, "#DA471F", 
-                             ifelse(Step == 3, "#0096B3", "#AD176E")))
-      
-      formatter("span",
-                style = function(x) {
-                  ifelse(is.na(x) | x == 0, 
-                         "background-color: transparent;",  # No bar for NA and 0
-                         paste("display: inline-block; direction: rtl; width:", 
-                               percent(x / 100), "; background-color:", color, "; color: black;"))
-                },
-                x ~ ifelse(x < 10 & !is.na(x), 
-                           sprintf("%.1f", x),  # Show 1 decimal for values less than 10
-                           sprintf("%.0f", x))  # Show 0 decimals for values 10 or more
-      )
-    }
+    # Add a helper column to the data frame to identify the rows for special styling
+    df_table$row_index <- ifelse(row.names(df_table) %in% c(2:6, 8:10, 12:16, 18:19), TRUE, FALSE)
+
     
-    
-    custom_color_bar_and_background <- function(Step, Score) {
-      # Define original bar colors based on 'id' values
-      bar_color <- ifelse(Step == 1, "#064871", 
-                          ifelse(Step == 2, "#DA471F", 
-                                 ifelse(Step == 3, "#0096B3", 
-                                        ifelse(Step == 4, "#AD176E", "transparent"))))
-      
-      # Define lighter background color versions based on the 'Step' values
-      background_color <- ifelse(Step == 1, "#98B2C7",     # Lighter version of #064871
-                                 ifelse(Step == 2, "#F5A489",   # Lighter version of #DA471F
-                                        ifelse(Step == 3, "#B3DDE6", # Lighter version of #0096B3
-                                               ifelse(Step == 4, "#DB97B5", "transparent"))))
-      
-      # Return the formatter with custom color bar and different background color
-      formatter("span",
-                style = function(x) {
-                  ifelse(is.na(x) | x == 0, 
-                         paste("background-color: transparent;"),  # No bar for NA and 0
-                         paste("display: inline-block; direction: rtl; width:", 
-                               percent(x / 100), "; background-color:", bar_color, "; color: black;"))
-                },
-                x ~ ifelse(x < 10 & !is.na(x), 
-                           sprintf("%.1f", x),  # Show 1 decimal for values less than 10
-                           sprintf("%.0f", x)),  # Show 0 decimals for values 10 or more
-                background = function(x) {
-                  paste("background-color:", background_color, ";")  # Set the lighter background color
-                }
-      )
-    }
-       
-    formattable(
-      df_table,
+    ft <- formattable(
+      df_table[, !names(df_table) %in% "row_index"],  # Exclude the RowHighlight column
       list(
-        Score = custom_color_bar_and_background(df_table$Step)
+        Step = formatter("span", 
+                         style = function(x, row_index) {
+                        
+                           # Define the rows where you want white text color
+                           ifelse(df_table$row_index,
+                                  style(color = "white", 
+                                        font_weight = "bold",  # Make the text bold
+                                        display = "block", 
+                                        width = "10px", 
+                                        text_align = "right"),
+                                  style(color = "black",   # Default color for other rows
+                                        font_weight = "bold",  # Make the text bold
+                                        display = "block", 
+                                        width = "10px", 
+                                        text_align = "right"))
+                         }),
+        Benchmark = formatter("span", style = ~ style(
+          display = "block", 
+          width = "10px",   # Set max width of Explanation column
+          text_align = "right"
+        )),
+        Explanation = formatter("span", style = ~ style(
+          display = "block", 
+          width = "450px",   # Set max width of Explanation column
+          overflow = "hidden",
+          white_space = "normal", # Enable word wrapping
+          text_align = "left"
+        )),
+        Score = formatter("span",
+                          x ~ icontext(ifelse(is.na(x) | x == 0, "", "color_bar"), sapply(x, format_score)),
+                          style = function(x, Step) {
+                            # Apply color only if Score is not NA or 0
+                            ifelse(is.na(x) | x == 0,
+                                   style(display = "block", width = "450px", text_align = "center", background = "none", color = "black"),
+                                   ifelse(x <= 5, 
+                                          style(display = "grid", 
+                                                width = paste0(x*1, "%"),   # Width proportional to the score
+                                                background = color_map[as.character(df_table$Step)],  # Set color based on Step
+                                                height = "30px",          # Bar height*
+                                                border_radius = "4px",    # Rounded corners
+                                                color = "black",          # Text color inside the bar
+                                                text_align = "center",
+                                                position = "relative",     # Enable absolute positioning
+                                                padding_left = "125px"      # Add padding for text inside the bar
+                                          ),
+                                          style(display = "block", 
+                                         width = paste0(x*1, "%"),   # Width proportional to the score
+                                         background = color_map[as.character(df_table$Step)],  # Set color based on Step
+                                         height = "30px",          # Bar height*
+                                         border_radius = "4px",    # Rounded corners
+                                         color = "white",          # Text color inside the bar
+                                         text_align = "center")))
+                          })
       ),
-      align = c("r","r","r","r","r","l")
-    )
+      align = c("c","c","l","r","r","c")
+    ) %>%
+    as.htmlwidget(width=300)
+    
+    
+ 
+    
   })
   
   
