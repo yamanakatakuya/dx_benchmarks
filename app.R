@@ -45,7 +45,7 @@ ui <-
   navbarPage(
     "TB Diagnostic Benchmarks",
     tabPanel(
-      "Country benckmarks",
+      "Country benchmarks",
       fluidPage(theme = shinytheme("sandstone"),
       # --------------------- each country ---------------------#
       fluidPage(
@@ -64,6 +64,20 @@ ui <-
                    htmlOutput("table"))
           )
         ),
+        
+        fluidRow(tags$div(style = "padding-left: 20px; padding-right: 20px;",
+                          textOutput(outputId = "page_footer"))
+        ),
+        
+        fluidRow(tags$div(id = "link",
+                          style = "padding-left: 20px; padding-right: 20px;",
+                          
+                          # Add app version number and links to GTB and Github
+                          HTML(paste0("For further details of TB diagnostic benchmarks, see
+                                  <a href='https://iris.who.int/handle/10665/366854' target='_blank'>
+                            WHO standard: universal access to rapid tuberculosis diagnostics</a>."))
+        )),
+        
         
         fluidRow(tags$div(id = "metadata",
                           style = "padding: 20px; font-style: italic; font-size: 80%;",
@@ -176,7 +190,7 @@ server <- function(input, output, session) {
        select(country:g_whoregion,score1a:denom12)
 
      category_values <- c("1A","1B","1C","1D","1E",
-                               "2","3","4","5","6","7","8",
+                               "2","3","4","5","6*","7","8",
                                "9A","9B","9C","9D",
                                "10","11","12")
 
@@ -199,10 +213,10 @@ server <- function(input, output, session) {
                       "Percentage of districts in which all facilities have a TB diagnostic algorithm requiring use of a WHO-recommended rapid diagnostic test as the initial diagnostic test for all patients with presumptive TB",
                       "Percentage of primary health-care facilities with access to WHO-recommended rapid diagnostic tests",
                       "Percentage of new and relapse cases tested using a WHO-recommended rapid diagnostic test as the initial diagnostic test",
-                      "Percentage of tests required to test all patients with presumptive TB that can be performed with existing instruments",
+                      "Percentage of tests required to test all people with presumptive TB that can be performed with existing instruments",
                       "Percentage of sites providing molecular WHO-recommended rapid diagnostics testing for TB with annual error rates of 5% or less",
                       "Percentage of people with presumptive TB tested with a WHO-recommended rapid diagnostic test",
-                      "Percentage of pleplw diagnosed with new and previously treated bacteriologically confirmed pulmonary TB with test results for rifampicin",
+                      "Percentage of people diagnosed with new and previously treated bacteriologically confirmed pulmonary TB with test results for rifampicin",
                       "Percentage of people with resistance to rifampicin and with test results for susceptibility to fluoroquinolones",
                       "Percentage of people with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for bedaquiline",
                       "Percentage of patients with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for linezolid",
@@ -210,11 +224,21 @@ server <- function(input, output, session) {
                       "Percentage of districts that monitored test positivity rate",
                       "Percentage of laboratories that achieved a turn-around time within 48 hours for at least 80% of samples received for WHO-recommended rapid diagnostic testing")
      
-     dfc$Explanation <- explanation
+     explanation2 <- c("Increase the number of people with presumptive TB in care",
+                       "","","","","",
+                       "Increase access to WRDs",
+                       "","","",
+                       "Increase WRD and drug resistance testing",
+                       "","","","","",
+                       "Increase WRD-based diagnosis",
+                       "","")
+     
+     dfc$`Explanation of steps` <- explanation2
+     dfc$`Explanation of benchmarks` <- explanation
      
      dfc <- dfc %>% 
        mutate(Step = c(rep(1, times = 6), rep(2, times = 4), rep(3, times = 6), rep(4, times = 3))) %>%
-       select(country:g_whoregion,Step,Benchmark,Explanation,Numerator,Denominator,Score)
+       select(country:g_whoregion,Step,`Explanation of steps`,Benchmark,`Explanation of benchmarks`,Numerator,Denominator,Score)
      
 
   })
@@ -231,6 +255,8 @@ server <- function(input, output, session) {
                    "2" = "#DA471F",  # Color for id 2
                    "3" = "#0096B3",  # Color for id 3
                    "4" = "#AD176E")  # Color for id 4
+    
+    step_color <- color_map[as.character(df_table$Step)]
     
     # Function to format score based on value range
     format_score <- function(x) {
@@ -266,20 +292,28 @@ server <- function(input, output, session) {
                                         display = "block", 
                                         width = "10px", 
                                         text_align = "right"),
-                                  style(color = "black",   # Default color for other rows
+                                  style(color = "white",   # Default color for other rows
+                                        `background-color` = step_color,
                                         font_weight = "bold",  # Make the text bold
-                                        display = "block", 
-                                        width = "10px", 
+                                          display = "block", 
+                                        width = "50px", 
                                         text_align = "right"))
                          }),
+        `Explanation of steps` = formatter("span", style = ~ style(
+          display = "block", 
+          width = "200px",   # Set max width of Explanation column
+          overflow = "hidden",
+          white_space = "normal", # Enable word wrapping
+          text_align = "left"
+        )),
         Benchmark = formatter("span", style = ~ style(
           display = "block", 
           width = "10px",   # Set max width of Explanation column
           text_align = "right"
         )),
-        Explanation = formatter("span", style = ~ style(
+        `Explanation of benchmarks` = formatter("span", style = ~ style(
           display = "block", 
-          width = "450px",   # Set max width of Explanation column
+          width = "400px",   # Set max width of Explanation column
           overflow = "hidden",
           white_space = "normal", # Enable word wrapping
           text_align = "left"
@@ -310,15 +344,17 @@ server <- function(input, output, session) {
                                          text_align = "center")))
                           })
       ),
-      align = c("c","c","l","r","r","c")
+      align = c("c","l","c","l","r","r","c")
     ) %>%
-    as.htmlwidget(width=300)
-    
-    
- 
+    as.htmlwidget(width=200)
     
   })
   
+  
+  output$page_footer <- renderText({
+    paste0("* Benchmarks 6 can be beyond 100. A value above 100 may not mean that all people have access, it may mean that the capacity is not optimally divided over the country or that an overcapacity may be needed to provided access also in remote areas.\n"
+    )
+  })
   
   
 }  
