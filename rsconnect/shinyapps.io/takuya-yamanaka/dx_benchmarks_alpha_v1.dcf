@@ -1,0 +1,13 @@
+name: dx_benchmarks_alpha_v1
+title: dx_benchmarks_alpha_v1
+username: takuya-yamanaka
+account: takuya-yamanaka
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12873926
+bundleId: 9163864
+url: https://takuya-yamanaka.shinyapps.io/dx_benchmarks_alpha_v1/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Dashboard design.xlsx|README.md|who_tb_dcf2024.pdf
