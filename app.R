@@ -25,9 +25,7 @@ str <- read.csv("latest_strategy_2024-08-26.csv") %>%
 tpt <- read.csv("latest_contacts_tpt_2024-08-26.csv") %>%
   select(iso2,newinc_con:newinc_con_screen)
 
-notif <- read.csv("latest_notifications_2024-09-26.csv") %>%
-  select(iso2,newinc_con:newinc_con_screen)
-
+notif <- read.csv("latest_notifications_2024-09-27.csv")
 
 df <- str %>%
   left_join(tpt, by = "iso2") %>%
