@@ -21,13 +21,13 @@ library(htmltools)
 select <- c("AO",	"AR",	"AZ",	"BD",	"BY",	"BZ",	"BO",	"BR",	"KH",	"CF",	"CL",	"CN",	"CO",	"CG",	"CR",	"CU",	"KP",	"CD",	"DO",	"EC",	"SV",	"ET",	"GA",	"GT",	"GY",	"HT",	"HN",	"ID",	"JM",	"KE",	"KG",	"LA",	"LS",	"LR",	"MX",	"MN",	"MZ",	"MM",	"NA",	"NP",	"NI",	"NG",	"PK",	"PA",	"PG",	"PY",	"PE",	"PH",	"MD",	"ZA",	"SR",	"TJ",	"TH",	"UG",	"UA",	"TZ",	"UY",	"UZ",	"VE",	"VN",	"ZM",	"ZW")
 
 ## load TPT and strategy datasets
-str <- read.csv("latest_strategy_2024-08-26.csv") %>%
+str <- read.csv("latest_strategy_2024-10-02.csv") %>%
   select(country:g_whoregion,plhiv_all_screen_data_available:m_wrd_tat_lt_48h,m_wrd)
 
-tpt <- read.csv("latest_contacts_tpt_2024-08-26.csv") %>%
+tpt <- read.csv("latest_contacts_tpt_2024-10-02.csv") %>%
   select(iso2,newinc_con:newinc_con_screen)
 
-notif <- read.csv("latest_notifications_2024-09-30.csv") %>%
+notif <- read.csv("latest_notifications_2024-10-02.csv") %>%
   select(iso2,new_labconf:tbdeaths_vr)
 
 
