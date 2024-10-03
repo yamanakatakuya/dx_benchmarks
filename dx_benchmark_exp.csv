@@ -13,8 +13,8 @@ Step,Benchmark,Numerator,Denominator
 3,8,Total number of people with presumptive TB tested with a WRD,Total number of people with presumptive TB
 3,9A,Number of people notified with bacteriologically confirmed pulmonary TB with DST results for rifampicin resistance.,Number of people notified with bacteriologically confirmed pulmonary TB
 3,9B,Number of people notified with bacteriologically confirmed rifampicin-resistant pulmonary TB and DST results for fluoroquinolones,Number of people notified with bacteriologically confirmed rifampicin-resistant pulmonary TB
-3,9C,Number of patients notified with bacteriologically confirmed rifampicin and fluoroquinolones-resistant pulmonary TB with DST results for bedaquiline,Number of patients notified with bacteriologically confirmed rifampicin and fluoroquinolones-resistant pulmonary TB
-3,9D,Number of patients notified with bacteriologically confirmed rifampicin and fluoroquinolones-resistant pulmonary TB with DST results for linezolid,Number of patients notified with bacteriologically confirmed rifampicin and fluoroquinolones-resistant pulmonary TB
+3,9C,Number of patients notified with bacteriologically confirmed rifampicin- and fluoroquinolone-resistant pulmonary TB with DST results for bedaquiline,Number of patients notified with bacteriologically confirmed rifampicin- and fluoroquinolone-resistant pulmonary TB
+3,9D,Number of patients notified with bacteriologically confirmed rifampicin- and fluoroquinolone-resistant pulmonary TB with DST results for linezolid,Number of patients notified with bacteriologically confirmed rifampicin- and fluoroquinolone-resistant pulmonary TB
 4,10,"Number of people notified with pulmonary TB tested with a WRD, irrespective of results, before starting treatment","Total number of people notified with pulmonary TB, both bacteriologically confirmed and clinically diagnosed"
 4,11,Number of districts that monitor test-positivity rate,Total number of districts in the country
 4,12,Number of laboratories that achieve a turn-around time within 48 hours for at least 80% of samples received for WRD testing,Number of WRD testing laboratories

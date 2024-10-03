@@ -112,12 +112,17 @@ ui <-
       
   
       fluidRow(
-        column(width = 12,
-               tags$div(style="padding: 10px 20px 10px 20px;",
+        tags$div(
+          style="padding: 10px 20px 10px 20px;class: ms-fontWeight-bold;",
+          h4(paste0("Summary: Numerator and denominator used for WHO benchmarks of universal access to rapid TB diagnostics"))
+        )
+      ),
+      
+      fluidRow(
+               tags$div(style = "padding-left: 20px; padding-right: 20px;",
                  class   = "cw-container",
                  checked = NA,
                  htmlOutput("table_bench"))
-        )
       ),
       
       fluidRow(tags$div(id = "link2",
