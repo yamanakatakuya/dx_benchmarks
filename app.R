@@ -241,7 +241,7 @@ server <- function(input, output, session) {
               denom10 = (new_labconf+new_clindx+new_ep+ret_rel_labconf),
               denom11 = district,
               denom12 = m_wrd) %>%
-       select(country:g_whoregion,score1a:denom12)
+       select(country:g_whoregion,score1a:denom12) 
 
      category_values <- c("1A","1B","1C","1D","1E",
                                "2","3","4","5","6*","7","8",
@@ -256,7 +256,7 @@ server <- function(input, output, session) {
        mutate(category = ifelse(grepl("^score", variable), "Score", 
                                ifelse(grepl("^numer", variable), "Numerator", "Denominator"))) %>% 
        select(!variable) %>% 
-       pivot_wider(names_from = category, values_from = value) 
+       pivot_wider(names_from = category, values_from = value)
      
      explanation <- c("Percentage of household contacts who were evaluated for TB disease and TB infection",
                       "Percentage of people living with HIV who were screened for TB",
@@ -315,7 +315,7 @@ server <- function(input, output, session) {
     # Function to format score based on value range
     format_score <- function(x) {
       if (is.na(x)) {
-        return(NA)
+        return("—")
       } else if (x >= 10) {
         return(sprintf("%.0f", x))  # No decimal for scores >= 10
       } else if (x >= 1| x==0) {
@@ -326,8 +326,9 @@ server <- function(input, output, session) {
     }
     
     # Format Numerator and Denominator with thousand separators
-    df_table$Numerator <- format(df_table$Numerator, big.mark = " ", scientific = FALSE)
-    df_table$Denominator <- format(df_table$Denominator, big.mark = " ", scientific = FALSE)
+    df_table <- df_table %>%
+      mutate(Numerator = ifelse(is.na(Numerator), "—", format(df_table$Numerator, big.mark = " ", scientific = FALSE))) %>%
+      mutate(Denominator = ifelse(is.na(Denominator), "—", format(df_table$Denominator, big.mark = " ", scientific = FALSE))) 
     
     # Add a helper column to the data frame to identify the rows for special styling
     df_table$row_index <- ifelse(row.names(df_table) %in% c(2:6, 8:10, 12:16, 18:19), TRUE, FALSE)
@@ -400,7 +401,7 @@ server <- function(input, output, session) {
       ),
       align = c("c","l","c","l","r","r","c")
     ) %>%
-    as.htmlwidget(width=200)
+    as.htmlwidget(width="60%")
     
   })
   
