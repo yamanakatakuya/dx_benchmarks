@@ -3,7 +3,7 @@
 # Takuya Yamanaka, October 2024
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-app_version <- "Version 2.0_alpha"
+app_version <- "Version 2.2_alpha"
 
 ## load packages
 library("shiny")
@@ -14,7 +14,7 @@ library(formattable)
 library(htmlwidgets)
 library(shinythemes)
 library(tidyverse)
-# library(kableExtra)
+library(kableExtra)
 library(htmltools)
 
 # selected countries
@@ -30,12 +30,15 @@ tpt <- read.csv("latest_contacts_tpt_2024-10-02.csv") %>%
 notif <- read.csv("latest_notifications_2024-10-02.csv") %>%
   select(iso2,new_labconf:tbdeaths_vr)
 
+bench <- read.csv("dx_benchmark_exp.csv")
 
 df <- str %>%
   left_join(tpt, by = "iso2") %>%
   left_join(notif, by = "iso2") %>%
   filter(!is.na(plhiv_all_screen_data_available)) %>%
   mutate(iso2 = ifelse(country == "Namibia", "NA", iso2))
+
+year <- 2023
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Web interface code
@@ -55,6 +58,12 @@ ui <-
                           uiOutput(outputId = "country"))
         ),
         
+        fluidRow(
+          tags$div(
+            style="padding: 10px 20px 10px 20px;class: ms-fontWeight-bold;",
+            h4(paste0("WHO benchmarks of universal access to rapid TB diagnostics, ", year))
+          )
+        ),
         
         fluidRow(
           column(width = 12,
@@ -93,6 +102,46 @@ ui <-
     
 
     
+  ),
+  
+  tabPanel(
+    "Details of benchmarks",
+  
+    # --------------------- each country ---------------------#
+    fluidPage(
+      
+  
+      fluidRow(
+        column(width = 12,
+               tags$div(style="padding: 10px 20px 10px 20px;",
+                 class   = "cw-container",
+                 checked = NA,
+                 htmlOutput("table_bench"))
+        )
+      ),
+      
+      fluidRow(tags$div(id = "link2",
+                        style = "padding-left: 20px; padding-right: 20px;",
+                        
+                        # Add app version number and links to GTB and Github
+                        HTML(paste0("For further details of TB diagnostic benchmarks, see
+                                  <a href='https://iris.who.int/handle/10665/366854' target='_blank'>
+                            WHO standard: universal access to rapid tuberculosis diagnostics</a>."))
+      )),
+      
+      
+      fluidRow(tags$div(id = "metadata2",
+                        style = "padding: 20px; font-style: italic; font-size: 80%;",
+                        
+                        # Add app version number and links to GTB and Github
+                        HTML(paste0(app_version,
+                                    ", Source code on <a href='https://github.com/yamanakatakuya/dx_benckmark' target='_blank'>Github</a>.
+                                  Data collected and published by the
+                                  <a href='https://www.who.int/teams/global-tuberculosis-programme/data' target='_blank'>
+                            World Health Organization</a>.</i>"))
+      ))
+      
+    )    
   )
   )
 
@@ -355,6 +404,31 @@ server <- function(input, output, session) {
     paste0("* Benchmarks 6 can be beyond 100. A value above 100 may not mean that all people have access, it may mean that the capacity is not optimally divided over the country or that an overcapacity may be needed to provided access also in remote areas.\n"
     )
   })
+  
+  
+  output$table_bench <- function(){
+    
+    step_colors <- c("#064871", "","","","","",
+                     "#DA471F", "","","",
+                     "#0096B3", "","","","","",
+                     "#AD176E", "","")
+    
+    # Create a kableExtra table
+    kable(bench, "html", escape = FALSE, col.names = c("Step", "Benchmark", "Numerator", "Denominator"), table.attr = "style='width:50%;'") %>%
+      kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
+      row_spec(0, background = "#00A14C", color = "white") %>%  # Header row styling
+      column_spec(1, extra_css = "text-align: center;", background = step_colors, color = "white", width = "10px") %>%
+      column_spec(2, extra_css = "text-align: center;", width = "10px") %>%
+      column_spec(3, width = "500px") %>%
+      column_spec(4, width = "350px") %>%
+      collapse_rows(columns = 1, valign = "middle") #%>%  # Merge cells for "Step"
+      # Apply background colors to the merged cells of "Step"
+  #     row_spec(1:6, background = "#064871", color = "white") %>%  # Color for Step 1
+  #     row_spec(7:10, background = "#DA471F", color = "white") %>%  # Color for Step 2
+  #     row_spec(11:16, background = "#0096B3", color = "white") %>%  # Color for Step 3
+  #     row_spec(17:19, background = "#AD176E", color = "white")  # Color for Step 4
+      
+  }
   
   
 }  
