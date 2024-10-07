@@ -134,7 +134,7 @@ server <- function(input, output, session) {
               score1b = plhiv_all_screen/plhiv_all*100,
               score1c = plhiv_new_screen/plhiv_new*100,
               score1d = prisoners_screen/prisoners*100,
-              score1e = miners/miners_screen_data_available*100,
+              score1e = miners_screen/miners*100,
               score2  = district_cxr/district*100,
               score3  = district_wrd/district*100,
               score4  = phcf_wrd/phcf*100,
@@ -153,7 +153,7 @@ server <- function(input, output, session) {
               numer1b = plhiv_all_screen,
               numer1c = plhiv_new_screen,
               numer1d = prisoners_screen,
-              numer1e = miners,
+              numer1e = miners_screen,
               numer2  = district_cxr,
               numer3  = district_wrd,
               numer4  = phcf_wrd,
@@ -172,7 +172,7 @@ server <- function(input, output, session) {
               denom1b = plhiv_all,
               denom1c = plhiv_new,
               denom1d = prisoners,
-              denom1e = miners_screen_data_available,
+              denom1e = miners,
               denom2  = district,
               denom3  = district,
               denom4  = phcf,
@@ -324,7 +324,7 @@ server <- function(input, output, session) {
                             # Apply color only if Score is not NA or 0
                             ifelse(is.na(x) | x == 0,
                                    style(display = "block", width = "450px", text_align = "center", background = "none", color = "black"),
-                                   ifelse(x <= 5, 
+                                   ifelse(x <= 4.9, 
                                           style(display = "grid", 
                                                 width = paste0(x*1, "%"),   # Width proportional to the score
                                                 background = color_map[as.character(df_table$Step)],  # Set color based on Step
