@@ -253,7 +253,7 @@ server <- function(input, output, session) {
                     names_to = "variable",
                     values_to = "value") %>%
        mutate(Benchmark = rep(category_values, times = 3)) %>% 
-       mutate(category = ifelse(grepl("^score", variable), "Score", 
+       mutate(category = ifelse(grepl("^score", variable), "Percentage", 
                                ifelse(grepl("^numer", variable), "Numerator", "Denominator"))) %>% 
        select(!variable) %>% 
        pivot_wider(names_from = category, values_from = value)
@@ -292,7 +292,7 @@ server <- function(input, output, session) {
      
      dfc <- dfc %>% 
        mutate(Step = c(rep(1, times = 6), rep(2, times = 4), rep(3, times = 6), rep(4, times = 3))) %>%
-       select(country:g_whoregion,Step,`Explanation of steps`,Benchmark,`Explanation of benchmarks`,Numerator,Denominator,Score)
+       select(country:g_whoregion,Step,`Explanation of steps`,Benchmark,`Explanation of benchmarks`,Numerator,Denominator,Percentage)
      
 
   })
@@ -316,6 +316,8 @@ server <- function(input, output, session) {
     format_score <- function(x) {
       if (is.na(x)) {
         return("—")
+      } else if (x > 100) {
+        return(">100*")  # showing >100
       } else if (x >= 10) {
         return(sprintf("%.0f", x))  # No decimal for scores >= 10
       } else if (x >= 1| x==0) {
@@ -373,7 +375,7 @@ server <- function(input, output, session) {
           white_space = "normal", # Enable word wrapping
           text_align = "left"
         )),
-        Score = formatter("span",
+        Percentage = formatter("span",
                           x ~ icontext(ifelse(is.na(x) | x == 0, "", "color_bar"), sapply(x, format_score)),
                           style = function(x, Step) {
                             # Apply color only if Score is not NA or 0
@@ -393,7 +395,7 @@ server <- function(input, output, session) {
                                           ifelse(x > 100, 
                                                  style(display = "grid", 
                                                        width = paste0(100, "%"),   # Width proportional to the score
-                                                       background = "#666666",  # Set color based on Step
+                                                       background = color_map[as.character(df_table$Step)],  # Set color based on Step
                                                        height = "30px",          # Bar height*
                                                        border_radius = "4px",    # Rounded corners
                                                        color = "white",          # Text color inside the bar
