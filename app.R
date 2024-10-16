@@ -420,7 +420,8 @@ server <- function(input, output, session) {
   
   
   output$page_footer <- renderText({
-    paste0("* Benchmarks 6 can be beyond 100. A value above 100 may not mean that all people have access, it may mean that the capacity is not optimally divided over the country or that an overcapacity may be needed to provided access also in remote areas.\n"
+    paste0("* Benchmarks 6 can be beyond 100. A value above 100 may not mean that all people have access, it may mean that the capacity is not optimally divided over the country or that an overcapacity may be needed to provided access also in remote areas.\n
+           Other benchmarks may also exceed 100 due to errors in data collection."
     )
   })
   
