@@ -264,7 +264,7 @@ server <- function(input, output, session) {
                       "Percentage of people in prison are screened for TB",
                       "Percentage of miners exposed to silica dust who were screened for TB",
                       "Percentage of districts in which chest X-ray is used regularly for TB screening",
-                      "Percentage of districts in which all facilities have a TB diagnostic algorithm requiring use of a WHO-recommended rapid diagnostic test as the initial diagnostic test for all patients with presumptive TB",
+                      "Percentage of districts in which all facilities have a TB diagnostic algorithm requiring use of a WHO-recommended rapid diagnostic test as the initial diagnostic test for all people with presumptive TB",
                       "Percentage of primary health-care facilities with access to WHO-recommended rapid diagnostic tests",
                       "Percentage of new and relapse cases tested using a WHO-recommended rapid diagnostic test as the initial diagnostic test",
                       "Percentage of tests required to test all people with presumptive TB that can be performed with existing instruments",
@@ -273,7 +273,7 @@ server <- function(input, output, session) {
                       "Percentage of people diagnosed with new and previously treated bacteriologically confirmed pulmonary TB with test results for rifampicin",
                       "Percentage of people with resistance to rifampicin and with test results for susceptibility to fluoroquinolones",
                       "Percentage of people with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for bedaquiline",
-                      "Percentage of patients with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for linezolid",
+                      "Percentage of people with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for linezolid",
                       "Percentage of new and relapse pulmonary bacteriologically confirmed and clinically diagnosed cases tested with a WHO-recommended rapid diagnostic test",
                       "Percentage of districts that monitored test positivity rate",
                       "Percentage of laboratories that achieved a turn-around time within 48 hours for at least 80% of samples received for WHO-recommended rapid diagnostic testing")
