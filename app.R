@@ -3,7 +3,7 @@
 # Takuya Yamanaka, October 2024
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-app_version <- "Version 2.2_alpha"
+app_version <- "Version 1.0_beta"
 
 ## load packages
 library("shiny")
@@ -390,13 +390,24 @@ server <- function(input, output, session) {
                                                 position = "relative",     # Enable absolute positioning
                                                 padding_left = "125px"      # Add padding for text inside the bar
                                           ),
-                                          style(display = "block", 
+                                          ifelse(x > 100, 
+                                                 style(display = "grid", 
+                                                       width = paste0(100, "%"),   # Width proportional to the score
+                                                       background = "#666666",  # Set color based on Step
+                                                       height = "30px",          # Bar height*
+                                                       border_radius = "4px",    # Rounded corners
+                                                       color = "white",          # Text color inside the bar
+                                                       text_align = "center",
+                                                       position = "relative",     # Enable absolute positioning
+                                                       padding_left = "125px"      # Add padding for text inside the bar
+                                                 ),
+                                                 style(display = "block", 
                                          width = paste0(x*1, "%"),   # Width proportional to the score
                                          background = color_map[as.character(df_table$Step)],  # Set color based on Step
                                          height = "30px",          # Bar height*
                                          border_radius = "4px",    # Rounded corners
                                          color = "white",          # Text color inside the bar
-                                         text_align = "center")))
+                                         text_align = "center"))))
                           })
       ),
       align = c("c","l","c","l","r","r","c")
