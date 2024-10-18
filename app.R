@@ -3,7 +3,7 @@
 # Takuya Yamanaka, October 2024
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-app_version <- "Version 1.0_beta"
+app_version <- "Version 1.0"
 
 ## load packages
 library("shiny")
@@ -244,7 +244,7 @@ server <- function(input, output, session) {
        select(country:g_whoregion,score1a:denom12) 
 
      category_values <- c("1A","1B","1C","1D","1E",
-                               "2","3","4","5","6*","7","8",
+                               "2","3","4","5","6","7","8",
                                "9A","9B","9C","9D",
                                "10","11","12")
 
@@ -420,8 +420,7 @@ server <- function(input, output, session) {
   
   
   output$page_footer <- renderText({
-    paste0("* Benchmarks 6 can be beyond 100. A value above 100 may not mean that all people have access, it may mean that the capacity is not optimally divided over the country or that an overcapacity may be needed to provided access also in remote areas.\n
-           Other benchmarks may also exceed 100 due to errors in data collection."
+    paste0("* Value above 100%. Benchmark 6: testing capacity above 100% does not imply universal access but simply sufficient capacity is available. The distribution and accessibility of such capacity may still be inadequate requiring optimization. Other benchmarks: values above 100% may be due to data errors."
     )
   })
   
