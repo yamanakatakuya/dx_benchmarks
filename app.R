@@ -20,14 +20,15 @@ library(htmltools)
 # selected countries
 select <- c("AO",	"AR",	"AZ",	"BD",	"BY",	"BZ",	"BO",	"BR",	"KH",	"CF",	"CL",	"CN",	"CO",	"CG",	"CR",	"CU",	"KP",	"CD",	"DO",	"EC",	"SV",	"ET",	"GA",	"GT",	"GY",	"HT",	"HN",	"ID",	"JM",	"KE",	"KG",	"LA",	"LS",	"LR",	"MX",	"MN",	"MZ",	"MM",	"NA",	"NP",	"NI",	"NG",	"PK",	"PA",	"PG",	"PY",	"PE",	"PH",	"MD",	"ZA",	"SR",	"TJ",	"TH",	"UG",	"UA",	"TZ",	"UY",	"UZ",	"VE",	"VN",	"ZM",	"ZW")
 
-## load TPT and strategy datasets
-str <- read.csv("latest_strategy_2024-10-02.csv") %>%
+## load nofitications, TPT and strategy dataset
+### data is as of 18 October 2024
+str <- read.csv("latest_strategy_2024-10-18.csv") %>%
   select(country:g_whoregion,plhiv_all_screen_data_available:m_wrd_tat_lt_48h,m_wrd)
 
-tpt <- read.csv("latest_contacts_tpt_2024-10-02.csv") %>%
+tpt <- read.csv("latest_contacts_tpt_2024-10-18.csv") %>%
   select(iso2,newinc_con:newinc_con_screen)
 
-notif <- read.csv("latest_notifications_2024-10-02.csv") %>%
+notif <- read.csv("latest_notifications_2024-10-18.csv") %>%
   select(iso2,new_labconf:tbdeaths_vr)
 
 bench <- read.csv("dx_benchmark_exp.csv")
