@@ -18,7 +18,7 @@ library(kableExtra)
 library(htmltools)
 
 # selected countries
-select <- c("AO",	"AR",	"AZ",	"BD",	"BY",	"BZ",	"BO",	"BR",	"KH",	"CF",	"CL",	"CN",	"CO",	"CG",	"CR",	"CU",	"KP",	"CD",	"DO",	"EC",	"SV",	"ET",	"GA",	"GT",	"GY",	"HT",	"HN",	"ID",	"JM",	"KE",	"KG",	"LA",	"LS",	"LR",	"MX",	"MN",	"MZ",	"MM",	"NA",	"NP",	"NI",	"NG",	"PK",	"PA",	"PG",	"PY",	"PE",	"PH",	"MD",	"ZA",	"SR",	"TJ",	"TH",	"UG",	"UA",	"TZ",	"UY",	"UZ",	"VE",	"VN",	"ZM",	"ZW")
+select <- c("AO",	"AR",	"AZ",	"BD",	"BY",	"BZ",	"BO",	"BR",	"KH",	"CF",	"CL",	"CN",	"CO",	"CG",	"CR",	"CU",	"KP",	"CD",	"DO",	"EC",	"SV",	"ET",	"GA",	"GT",	"GY",	"HT",	"HN", "IN",	"ID",	"JM",	"KE",	"KG",	"LA",	"LS",	"LR",	"MX",	"MN",	"MZ",	"MM",	"NA",	"NP",	"NI",	"NG",	"PK",	"PA",	"PG",	"PY",	"PE",	"PH",	"MD","RU",	"SL","ZA",	"SR",	"TJ",	"TH",	"UG",	"UA",	"TZ",	"UY",	"UZ",	"VE",	"VN",	"ZM",	"ZW")
 
 ## load nofitications, TPT and strategy dataset
 ### data is as of 18 October 2024
@@ -36,7 +36,8 @@ bench <- read.csv("dx_benchmark_exp.csv")
 df <- str %>%
   left_join(tpt, by = "iso2") %>%
   left_join(notif, by = "iso2") %>%
-  filter(!is.na(plhiv_all_screen_data_available)) %>%
+  # filter(iso2 %in% select)
+  filter(!is.na(plhiv_all_screen_data_available)|iso2 %in% select) %>%
   mutate(iso2 = ifelse(country == "Namibia", "NA", iso2))
 
 year <- 2023
