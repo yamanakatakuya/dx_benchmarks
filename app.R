@@ -3,44 +3,65 @@
 # Takuya Yamanaka, October 2024
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-app_version <- "Version 1.0"
+app_version <- "Version 1.1"
 
 ## load packages
-library("shiny")
-library("glue")
-library("rlang")
+library(shiny)
 library(shinydashboard)
-library(formattable)
-library(htmlwidgets)
 library(shinythemes)
-library(tidyverse)
+library(dplyr)
 library(kableExtra)
-library(htmltools)
 
 # selected countries
 select <- c("AO",	"AR",	"AZ",	"BD",	"BY",	"BZ",	"BO",	"BR",	"KH",	"CF",	"CL",	"CN",	"CO",	"CG",	"CR",	"CU",	"KP",	"CD",	"DO",	"EC",	"SV",	"ET",	"GA",	"GT",	"GY",	"HT",	"HN", "IN",	"ID",	"JM",	"KE",	"KG",	"LA",	"LS",	"LR",	"MX",	"MN",	"MZ",	"MM",	"NA",	"NP",	"NI",	"NG",	"PK",	"PA",	"PG",	"PY",	"PE",	"PH",	"MD","RU",	"SL","ZA",	"SR",	"TJ",	"TH",	"UG",	"UA",	"TZ",	"UY",	"UZ",	"VE",	"VN",	"ZM",	"ZW")
-
-## load nofitications, TPT and strategy dataset
+  
+## load notifications, TPT and strategy datasets
 ### data is as of 18 October 2024
-str <- read.csv("latest_strategy_2024-10-18.csv") %>%
-  select(country:g_whoregion,plhiv_all_screen_data_available:m_wrd_tat_lt_48h,m_wrd)
+str <- read.csv("latest_strategy_2024-10-18.csv", na.strings = "") |>
+  select(country:year,plhiv_all_screen_data_available:m_wrd_tat_lt_48h,m_wrd)
 
-tpt <- read.csv("latest_contacts_tpt_2024-10-18.csv") %>%
+tpt <- read.csv("latest_contacts_tpt_2024-10-18.csv", na.strings = "") |>
   select(iso2,newinc_con:newinc_con_screen)
 
-notif <- read.csv("latest_notifications_2024-10-18.csv") %>%
+notif <- read.csv("latest_notifications_2024-10-18.csv", na.strings = "") |>
   select(iso2,new_labconf:tbdeaths_vr)
 
 bench <- read.csv("dx_benchmark_exp.csv")
 
-df <- str %>%
-  left_join(tpt, by = "iso2") %>%
-  left_join(notif, by = "iso2") %>%
-  # filter(iso2 %in% select)
-  filter(!is.na(plhiv_all_screen_data_available)|iso2 %in% select) %>%
-  mutate(iso2 = ifelse(country == "Namibia", "NA", iso2))
+df <- str |>
+  left_join(tpt, by = "iso2") |>
+  left_join(notif, by = "iso2") |>
+  filter(!is.na(plhiv_all_screen_data_available)|iso2 %in% select) |> 
+  # Restrict to the variables needed for the benchmarks
+  select(iso2, country, year,
+         newinc_con_screen, newinc_con,
+         plhiv_all_screen, plhiv_all,
+         plhiv_new_screen, plhiv_new,
+         prisoners_screen, prisoners,
+         miners_screen, miners,
+         district_cxr, district,
+         district_wrd,
+         phcf_wrd, phcf,
+         newinc_rdx, c_newinc,
+         wrd_test_capacity, presumptive,
+         m_wrd_error_rate_lte_5pct, m_wrd,
+         presumptive_wrd, presumptive,
+         r_rlt_new, r_rlt_ret,
+         pulm_labconf_new, pulm_labconf_ret,
+         rr_dst_rlt_fq, rr_new, rr_ret,
+         rr_fqr_bdqr_lzdr, rr_fqr_bdqs_lzdr, rr_fqr_bdqu_lzdr,
+         rr_fqr_bdqr_lzds, rr_fqr_bdqs_lzds, rr_fqr_bdqu_lzds,
+         rr_fqr_bdqr_lzdu, rr_fqr_bdqs_lzdu,
+         rr_fqr,
+         newinc_pulm_labconf_rdx, newinc_pulm_clindx_rdx,
+         new_labconf, new_clindx, ret_rel_labconf, ret_rel_clindx,
+         district_monitor_pos_rate,
+         m_wrd_tat_lt_48h)
+  
 
-year <- 2023
+year <- max(df$year)
+
+rm(str, tpt, notif)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Web interface code
@@ -49,6 +70,7 @@ year <- 2023
 ui <- 
   navbarPage(
     "TB Diagnostic Benchmarks",
+    header = tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "uad_table.css")),
     tabPanel(
       "Country benchmarks",
       fluidPage(theme = shinytheme("sandstone"),
@@ -72,7 +94,7 @@ ui <-
                  tags$div(
                    class   = "cw-container",
                    checked = NA,
-                   htmlOutput("table"))
+                   htmlOutput("uad_benchmarks", quoted=TRUE))
           )
         ),
         
@@ -164,8 +186,8 @@ server <- function(input, output, session) {
     already_selected <- input$iso2
     
     # Create a named list for selectInput
-    country_list <- df %>%
-      select(iso2, country) %>%
+    country_list <- df |>
+      select(iso2, country) |>
       arrange(country)
     
     country_list <- setNames(country_list[,"iso2"], country_list[,"country"])
@@ -178,256 +200,326 @@ server <- function(input, output, session) {
                 selectize = FALSE,
                 width = "380px")
   })
+ 
+# Better row sum ----
+# This function sums rows ignoring NAs unless all are NA
+# [rowSums() returns 0 instead of NA if all are NA and you use na.rm=TRUE]
+# use it like this
+# df$snu <- sum_of_row(df[c('new_sn', 'new_su')])
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sum_of_row <- function(x) {
+  tosum <- as.matrix(x)
+  summed <- rowMeans((tosum), na.rm=TRUE) * rowSums(!is.na((tosum)))
+  # Flush out any NaN's
+  summed <- ifelse(is.nan(summed), NA, summed)
+  return(summed)
+}
+
+# Function to format score based on value range
+format_score <- function(x) {
+  if (is.na(x)) {
+    return("—")
+  } else if (x > 100) {
+    return("&gt;100*")  # showing >100
+  } else if (x >= 10) {
+    return(sprintf("%.0f", x))  # No decimal for scores >= 10
+  } else if (x >= 1| x==0) {
+    return(sprintf("%.1f", x))  # One decimal for scores >= 1 and < 10
+  } else {
+    return(sprintf("%.2f", x))  # Two decimals for scores < 1
+  }
+}
+
+append_benchmark_row_html <- function(html_string,
+                                      show_as_step_start,
+                                      show_as_step_end,
+                                      step_number,
+                                      step_text,
+                                      benchmark_number,
+                                      benchmark_text,
+                                      numerator,
+                                      denominator){
+ 
+  # This function appends the html for a new row to the input html_string with the following structure:
+  #
+  # <tr @row_class>
+  #   <td class='step-@step_number'>@step_number</td>
+  #     <td>@step_text</td>
+  #     <td>@benchmark_number</td>
+  #     <td>@benchmark_text</td>
+  #     <td>@numerator</td>
+  #     <td>@denominator</td>
+  #     <td><span class='hbar' style='width: @width_pct%; background-color: var(--step-@step_number-colour);' title='@benchmark_text: @percentage%'>@percentage</span></td>
+  #  </tr>
   
-  # base reactive data frame
-  dfc <- reactive({
-     dfc <- df %>%
-       filter(iso2 == input$iso2)
-     
-     dfc <- dfc %>%
-       mutate(district = as.numeric(district)) %>%
-       mutate(score1a = newinc_con_screen/newinc_con*100,
-              score1b = plhiv_all_screen/plhiv_all*100,
-              score1c = plhiv_new_screen/plhiv_new*100,
-              score1d = prisoners_screen/prisoners*100,
-              score1e = miners_screen/miners*100,
-              score2  = district_cxr/district*100,
-              score3  = district_wrd/district*100,
-              score4  = phcf_wrd/phcf*100,
-              score5  = newinc_rdx/c_newinc*100,
-              score6  = wrd_test_capacity/presumptive*100,
-              score7  = m_wrd_error_rate_lte_5pct/m_wrd*100,
-              score8  = presumptive_wrd/presumptive*100,
-              score9a = (r_rlt_new+r_rlt_ret)/(pulm_labconf_new+pulm_labconf_ret)*100,
-              score9b = rr_dst_rlt_fq/(rr_new+rr_ret)*100,
-              score9c = (rr_fqr_bdqr_lzdr+rr_fqr_bdqs_lzdr+rr_fqr_bdqr_lzds+rr_fqr_bdqs_lzds+rr_fqr_bdqr_lzdu+rr_fqr_bdqs_lzdu)/rr_fqr*100,
-              score9d = (rr_fqr_bdqr_lzdr+rr_fqr_bdqs_lzdr+rr_fqr_bdqu_lzdr+rr_fqr_bdqr_lzds+rr_fqr_bdqs_lzds+rr_fqr_bdqu_lzds)/rr_fqr*100,
-              score10 = (newinc_pulm_labconf_rdx+newinc_pulm_clindx_rdx)/(new_labconf+new_clindx+new_ep+ret_rel_labconf)*100,
-              score11 = district_monitor_pos_rate/district*100,
-              score12 = m_wrd_tat_lt_48h/m_wrd*100) %>%
-       mutate(numer1a = newinc_con_screen,
-              numer1b = plhiv_all_screen,
-              numer1c = plhiv_new_screen,
-              numer1d = prisoners_screen,
-              numer1e = miners_screen,
-              numer2  = district_cxr,
-              numer3  = district_wrd,
-              numer4  = phcf_wrd,
-              numer5  = newinc_rdx,
-              numer6  = wrd_test_capacity,
-              numer7  = m_wrd_error_rate_lte_5pct,
-              numer8  = presumptive_wrd,
-              numer9a = (r_rlt_new+r_rlt_ret),
-              numer9b = rr_dst_rlt_fq,
-              numer9c = (rr_fqr_bdqr_lzdr+rr_fqr_bdqs_lzdr+rr_fqr_bdqr_lzds+rr_fqr_bdqs_lzds+rr_fqr_bdqr_lzdu+rr_fqr_bdqs_lzdu),
-              numer9d = (rr_fqr_bdqr_lzdr+rr_fqr_bdqs_lzdr+rr_fqr_bdqu_lzdr+rr_fqr_bdqr_lzds+rr_fqr_bdqs_lzds+rr_fqr_bdqu_lzds),
-              numer10 = (newinc_pulm_labconf_rdx+newinc_pulm_clindx_rdx),
-              numer11 = district_monitor_pos_rate,
-              numer12 = m_wrd_tat_lt_48h) %>%
-       mutate(denom1a = newinc_con,
-              denom1b = plhiv_all,
-              denom1c = plhiv_new,
-              denom1d = prisoners,
-              denom1e = miners,
-              denom2  = district,
-              denom3  = district,
-              denom4  = phcf,
-              denom5  = c_newinc,
-              denom6  = presumptive,
-              denom7  = m_wrd,
-              denom8  = presumptive,
-              denom9a = (pulm_labconf_new+pulm_labconf_ret),
-              denom9b = (rr_new+rr_ret),
-              denom9c = rr_fqr,
-              denom9d = rr_fqr,
-              denom10 = (new_labconf+new_clindx+new_ep+ret_rel_labconf),
-              denom11 = district,
-              denom12 = m_wrd) %>%
-       select(country:g_whoregion,score1a:denom12) 
+  # Calculate the percentage from the numerator and denominator
+  percentage <- ifelse(denominator==0, 
+                       NA,
+                       numerator * 100 / denominator)
 
-     category_values <- c("1A","1B","1C","1D","1E",
-                               "2","3","4","5","6","7","8",
-                               "9A","9B","9C","9D",
-                               "10","11","12")
-
-     dfc <- dfc %>% 
-       pivot_longer(!country:g_whoregion,
-                    names_to = "variable",
-                    values_to = "value") %>%
-       mutate(Benchmark = rep(category_values, times = 3)) %>% 
-       mutate(category = ifelse(grepl("^score", variable), "Percentage", 
-                               ifelse(grepl("^numer", variable), "Numerator", "Denominator"))) %>% 
-       select(!variable) %>% 
-       pivot_wider(names_from = category, values_from = value)
-     
-     explanation <- c("Percentage of household contacts who were evaluated for TB disease and TB infection",
-                      "Percentage of people living with HIV who were screened for TB",
-                      "Percentage of people newly diagnosed with HIV who were screened for TB",
-                      "Percentage of people in prison are screened for TB",
-                      "Percentage of miners exposed to silica dust who were screened for TB",
-                      "Percentage of districts in which chest X-ray is used regularly for TB screening",
-                      "Percentage of districts in which all facilities have a TB diagnostic algorithm requiring use of a WHO-recommended rapid diagnostic test as the initial diagnostic test for all people with presumptive TB",
-                      "Percentage of primary health-care facilities with access to WHO-recommended rapid diagnostic tests",
-                      "Percentage of new and relapse cases tested using a WHO-recommended rapid diagnostic test as the initial diagnostic test",
-                      "Percentage of tests required to test all people with presumptive TB that can be performed with existing instruments",
-                      "Percentage of sites providing molecular WHO-recommended rapid diagnostics testing for TB with annual error rates of 5% or less",
-                      "Percentage of people with presumptive TB tested with a WHO-recommended rapid diagnostic test",
-                      "Percentage of people diagnosed with new and previously treated bacteriologically confirmed pulmonary TB with test results for rifampicin",
-                      "Percentage of people with resistance to rifampicin and with test results for susceptibility to fluoroquinolones",
-                      "Percentage of people with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for bedaquiline",
-                      "Percentage of people with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for linezolid",
-                      "Percentage of new and relapse pulmonary bacteriologically confirmed and clinically diagnosed cases tested with a WHO-recommended rapid diagnostic test",
-                      "Percentage of districts that monitored test positivity rate",
-                      "Percentage of laboratories that achieved a turn-around time within 48 hours for at least 80% of samples received for WHO-recommended rapid diagnostic testing")
-     
-     explanation2 <- c("Increase the number of people with presumptive TB in care",
-                       "","","","","",
-                       "Increase access to WRDs",
-                       "","","",
-                       "Increase WRD and drug resistance testing",
-                       "","","","","",
-                       "Increase WRD-based diagnosis",
-                       "","")
-     
-     dfc$`Explanation of steps` <- explanation2
-     dfc$`Explanation of benchmarks` <- explanation
-     
-     dfc <- dfc %>% 
-       mutate(Step = c(rep(1, times = 6), rep(2, times = 4), rep(3, times = 6), rep(4, times = 3))) %>%
-       select(country:g_whoregion,Step,`Explanation of steps`,Benchmark,`Explanation of benchmarks`,Numerator,Denominator,Percentage)
-     
-
-  })
+  paste0(html_string,
+         ifelse(show_as_step_end == TRUE,
+                "<tr class='step-end'>",
+                "<tr>"
+         ),
+         "<td class='step-", step_number, "'>",
+         ifelse(show_as_step_start == TRUE,
+                step_number,
+                "&nbsp;"
+         ),
+         "</td>",
+         "<td>", 
+         ifelse(show_as_step_start == TRUE,
+                step_text,
+                "&nbsp;"
+         ),        
+         "</td>",
+         "<td>", benchmark_number, "</td>",
+         "<td>", benchmark_text, "</td>",
+         "<td>", 
+         ifelse(is.na(numerator), 
+                "—", 
+                format(numerator, big.mark = " ", scientific = FALSE)
+         ), 
+         "</td>",
+         "<td>", 
+         ifelse(is.na(denominator), 
+                "—", 
+                format(denominator, big.mark = " ", scientific = FALSE)
+         ), 
+         "</td>",
+         "<td>", 
+         ifelse(is.na(percentage), 
+                "", 
+                paste0("<span class='hbar' style='width: ",
+                       ifelse(percentage > 100,
+                              "100",
+                              percentage
+                       ),
+                       "%; background-color: var(--step-", step_number, "-colour);' title='",
+                       benchmark_text,
+                       ": ",
+                       format_score(percentage),
+                       "%'>",
+                       format_score(percentage),
+                       "&nbsp;</span>"
+                )
+         ), 
+         "</td>
+      </tr>"
+         
+  )
   
-  output$table <- renderUI({
-    
-    dfc <- dfc()
+}
 
-    df_table <- dfc %>%
-      select(!country:g_whoregion)
-    
-    # Color palette for each id
-    color_map <- c("1" = "#064871",  # Color for id 1
-                   "2" = "#DA471F",  # Color for id 2
-                   "3" = "#0096B3",  # Color for id 3
-                   "4" = "#AD176E")  # Color for id 4
-    
-    step_color <- color_map[as.character(df_table$Step)]
-    
-    # Function to format score based on value range
-    format_score <- function(x) {
-      if (is.na(x)) {
-        return("—")
-      } else if (x > 100) {
-        return(">100*")  # showing >100
-      } else if (x >= 10) {
-        return(sprintf("%.0f", x))  # No decimal for scores >= 10
-      } else if (x >= 1| x==0) {
-        return(sprintf("%.1f", x))  # One decimal for scores >= 1 and < 10
-      } else {
-        return(sprintf("%.2f", x))  # Two decimals for scores < 1
-      }
-    }
-    
-    # Format Numerator and Denominator with thousand separators
-    df_table <- df_table %>%
-      mutate(Numerator = ifelse(is.na(Numerator), "—", format(df_table$Numerator, big.mark = " ", scientific = FALSE))) %>%
-      mutate(Denominator = ifelse(is.na(Denominator), "—", format(df_table$Denominator, big.mark = " ", scientific = FALSE))) 
-    
-    # Add a helper column to the data frame to identify the rows for special styling
-    df_table$row_index <- ifelse(row.names(df_table) %in% c(2:6, 8:10, 12:16, 18:19), TRUE, FALSE)
 
-    
-    ft <- formattable(
-      df_table[, !names(df_table) %in% "row_index"],  # Exclude the RowHighlight column
-      list(
-        Step = formatter("span", 
-                         style = function(x, row_index) {
-                        
-                           # Define the rows where you want white text color
-                           ifelse(df_table$row_index,
-                                  style(color = "white", 
-                                        font_weight = "bold",  # Make the text bold
-                                        display = "block", 
-                                        width = "10px", 
-                                        text_align = "right"),
-                                  style(color = "white",   # Default color for other rows
-                                        `background-color` = step_color,
-                                        font_weight = "bold",  # Make the text bold
-                                          display = "block", 
-                                        width = "50px", 
-                                        text_align = "right"))
-                         }),
-        `Explanation of steps` = formatter("span", style = ~ style(
-          display = "block", 
-          width = "200px",   # Set max width of Explanation column
-          overflow = "hidden",
-          white_space = "normal", # Enable word wrapping
-          text_align = "left"
-        )),
-        Benchmark = formatter("span", style = ~ style(
-          display = "block", 
-          width = "10px",   # Set max width of Explanation column
-          text_align = "right"
-        )),
-        `Explanation of benchmarks` = formatter("span", style = ~ style(
-          display = "block", 
-          width = "400px",   # Set max width of Explanation column
-          overflow = "hidden",
-          white_space = "normal", # Enable word wrapping
-          text_align = "left"
-        )),
-        Percentage = formatter("span",
-                          x ~ icontext(ifelse(is.na(x) | x == 0, "", "color_bar"), sapply(x, format_score)),
-                          style = function(x, Step) {
-                            # Apply color only if Score is not NA or 0
-                            ifelse(is.na(x) | x == 0,
-                                   style(display = "block", width = "450px", text_align = "center", background = "none", color = "black"),
-                                   ifelse(x <= 4.9, 
-                                          style(display = "grid", 
-                                                width = paste0(x*1, "%"),   # Width proportional to the score
-                                                background = color_map[as.character(df_table$Step)],  # Set color based on Step
-                                                height = "30px",          # Bar height*
-                                                border_radius = "4px",    # Rounded corners
-                                                color = "black",          # Text color inside the bar
-                                                text_align = "center",
-                                                position = "relative",     # Enable absolute positioning
-                                                padding_left = "125px"      # Add padding for text inside the bar
-                                          ),
-                                          ifelse(x > 100, 
-                                                 style(display = "grid", 
-                                                       width = paste0(100, "%"),   # Width proportional to the score
-                                                       background = color_map[as.character(df_table$Step)],  # Set color based on Step
-                                                       height = "30px",          # Bar height*
-                                                       border_radius = "4px",    # Rounded corners
-                                                       color = "white",          # Text color inside the bar
-                                                       text_align = "center",
-                                                       position = "relative",     # Enable absolute positioning
-                                                       padding_left = "125px"      # Add padding for text inside the bar
-                                                 ),
-                                                 style(display = "block", 
-                                         width = paste0(x*1, "%"),   # Width proportional to the score
-                                         background = color_map[as.character(df_table$Step)],  # Set color based on Step
-                                         height = "30px",          # Bar height*
-                                         border_radius = "4px",    # Rounded corners
-                                         color = "white",          # Text color inside the bar
-                                         text_align = "center"))))
-                          })
-      ),
-      align = c("c","l","c","l","r","r","c")
-    ) %>%
-    as.htmlwidget(width="60%")
-    
-  })
+output$uad_benchmarks <- renderText({
   
+  # This function builds the html table of results for the selected country
   
+  req(input$iso2)
+  
+  benchmark_data <- df |> 
+    filter(iso2 == input$iso2)
+  
+  html_table <- "<table id='uad'>
+ <thead>
+  <tr>
+	  <th colspan='2'>Step</th>
+	  <th colspan='2'>Benchmark</th>
+	  <th>Numerator</th>
+	  <th>Denominator</th>
+	  <th>Percentage</th>
+ </tr>
+</thead>
+<tbody>" |> 
+    
+    append_benchmark_row_html(show_as_step_start = TRUE,
+                              show_as_step_end = FALSE,
+                              step_number = "1",
+                              step_text = "Increase the number of people with presumptive TB in care",
+                              benchmark_number = "1A",
+                              benchmark_text = "Percentage of household contacts who were evaluated for TB disease and TB infection",
+                              numerator = benchmark_data$newinc_con_screen,
+                              denominator = benchmark_data$newinc_con) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "1",
+                              step_text = "",
+                              benchmark_number = "1B",
+                              benchmark_text = "Percentage of people living with HIV who were screened for TB",
+                              numerator = benchmark_data$plhiv_all_screen,
+                              denominator = benchmark_data$plhiv_all) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "1",
+                              step_text = "",
+                              benchmark_number = "1C",
+                              benchmark_text = "Percentage of people newly diagnosed with HIV who were screened for TB",
+                              numerator = benchmark_data$plhiv_new_screen,
+                              denominator = benchmark_data$plhiv_new) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "1",
+                              step_text = "",
+                              benchmark_number = "1D",
+                              benchmark_text = "Percentage of people in prison are screened for TB",
+                              numerator = benchmark_data$prisoners_screen,
+                              denominator = benchmark_data$prisoners) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "1",
+                              step_text = "",
+                              benchmark_number = "1E",
+                              benchmark_text = "Percentage of miners exposed to silica dust who were screened for TB",
+                              numerator = benchmark_data$miners_screen,
+                              denominator = benchmark_data$miners) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = TRUE,
+                              step_number = "1",
+                              step_text = "",
+                              benchmark_number = "2",
+                              benchmark_text = "Percentage of districts in which chest X-ray is used regularly for TB screening",
+                              numerator = benchmark_data$district_cxr,
+                              denominator = benchmark_data$district) |> 
+    
+    append_benchmark_row_html(show_as_step_start = TRUE,
+                              show_as_step_end = FALSE,
+                              step_number = "2",
+                              step_text = "Increase access to WRDs",
+                              benchmark_number = "3",
+                              benchmark_text = "Percentage of districts in which all facilities have a TB diagnostic algorithm requiring use of a WHO-recommended rapid diagnostic test as the initial diagnostic test for all people with presumptive TB",
+                              numerator = benchmark_data$district_wrd,
+                              denominator = benchmark_data$district) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "2",
+                              step_text = "",
+                              benchmark_number = "4",
+                              benchmark_text = "Percentage of primary health-care facilities with access to WHO-recommended rapid diagnostic tests",
+                              numerator = benchmark_data$phcf_wrd,
+                              denominator = benchmark_data$phcf) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "2",
+                              step_text = "",
+                              benchmark_number = "5",
+                              benchmark_text = "Percentage of new and relapse cases tested using a WHO-recommended rapid diagnostic test as the initial diagnostic test",
+                              numerator = benchmark_data$newinc_rdx,
+                              denominator = benchmark_data$c_newinc) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = TRUE,
+                              step_number = "2",
+                              step_text = "",
+                              benchmark_number = "6",
+                              benchmark_text = "Percentage of tests required to test all people with presumptive TB that can be performed with existing instruments",
+                              numerator = benchmark_data$wrd_test_capacity,
+                              denominator = benchmark_data$presumptive) |> 
+    
+    append_benchmark_row_html(show_as_step_start = TRUE,
+                              show_as_step_end = FALSE,
+                              step_number = "3",
+                              step_text = "Increase WRD and drug resistance testing",
+                              benchmark_number = "7",
+                              benchmark_text = "Percentage of sites providing molecular WHO-recommended rapid diagnostics testing for TB with annual error rates of 5% or less",
+                              numerator = benchmark_data$m_wrd_error_rate_lte_5pct,
+                              denominator = benchmark_data$m_wrd) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "3",
+                              step_text = "",
+                              benchmark_number = "8",
+                              benchmark_text = "Percentage of people with presumptive TB tested with a WHO-recommended rapid diagnostic test",
+                              numerator = benchmark_data$presumptive_wrd,
+                              denominator = benchmark_data$presumptive) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "3",
+                              step_text = "",
+                              benchmark_number = "9A",
+                              benchmark_text = "Percentage of people diagnosed with new and previously treated bacteriologically confirmed pulmonary TB with test results for rifampicin",
+                              numerator = sum_of_row(benchmark_data |> select(r_rlt_new, r_rlt_ret)),
+                              denominator = sum_of_row(benchmark_data |> select(pulm_labconf_new, pulm_labconf_ret))) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "3",
+                              step_text = "",
+                              benchmark_number = "9B",
+                              benchmark_text = "Percentage of people with resistance to rifampicin and with test results for susceptibility to fluoroquinolones",
+                              numerator = benchmark_data$rr_dst_rlt_fq,
+                              denominator = sum_of_row(benchmark_data |> select(rr_new, rr_ret))) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "3",
+                              step_text = "",
+                              benchmark_number = "9C",
+                              benchmark_text = "Percentage of people with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for bedaquiline",
+                              numerator = sum_of_row(benchmark_data |> select(rr_fqr_bdqr_lzdr, rr_fqr_bdqs_lzdr, rr_fqr_bdqr_lzds, rr_fqr_bdqs_lzds, rr_fqr_bdqr_lzdu, rr_fqr_bdqs_lzdu)),
+                              denominator = benchmark_data$rr_fqr) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = TRUE,
+                              step_number = "3",
+                              step_text = "",
+                              benchmark_number = "9D",
+                              benchmark_text = "Percentage of people with resistance to rifampicin and resistance to fluoroquinolones and with susceptibility test results for linezolid",
+                              numerator = sum_of_row(benchmark_data |> select(rr_fqr_bdqr_lzdr, rr_fqr_bdqs_lzdr, rr_fqr_bdqu_lzdr, rr_fqr_bdqr_lzds, rr_fqr_bdqs_lzds, rr_fqr_bdqu_lzds)),
+                              denominator = benchmark_data$rr_fqr) |> 
+    
+    append_benchmark_row_html(show_as_step_start = TRUE,
+                              show_as_step_end = FALSE,
+                              step_number = "4",
+                              step_text = "Increase WRD-based diagnosis",
+                              benchmark_number = "10",
+                              benchmark_text = "Percentage of new and relapse pulmonary bacteriologically confirmed and clinically diagnosed cases tested with a WHO-recommended rapid diagnostic test",
+                              numerator = sum_of_row(benchmark_data |> select(newinc_pulm_labconf_rdx, newinc_pulm_clindx_rdx)),
+                              denominator = sum_of_row(benchmark_data |> select(new_labconf, new_clindx, ret_rel_labconf, ret_rel_clindx))) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = FALSE,
+                              step_number = "4",
+                              step_text = "",
+                              benchmark_number = "11",
+                              benchmark_text = "Percentage of districts that monitored test positivity rate",
+                              numerator = benchmark_data$district_monitor_pos_rate,
+                              denominator = benchmark_data$district) |> 
+    
+    append_benchmark_row_html(show_as_step_start = FALSE,
+                              show_as_step_end = TRUE,
+                              step_number = "4",
+                              step_text = "",
+                              benchmark_number = "12",
+                              benchmark_text = "Percentage of laboratories that achieved a turn-around time within 48 hours for at least 80% of samples received for WHO-recommended rapid diagnostic testing",
+                              numerator = benchmark_data$m_wrd_tat_lt_48h,
+                              denominator = benchmark_data$m_wrd) |> 
+    
+    paste0("</tbody></table>")
+  
+  return(html_table)
+  
+})
+
+
   output$page_footer <- renderText({
     paste0("* Value above 100%. Benchmark 6: testing capacity above 100% does not imply universal access but simply sufficient capacity is available. The distribution and accessibility of such capacity may still be inadequate requiring optimization. Other benchmarks: values above 100% may be due to data errors."
     )
   })
   
-  
   output$table_bench <- function(){
+    
+    # This function builds the static table with the benchmark definitions
     
     step_colors <- c("#064871", "","","","","",
                      "#DA471F", "","","",
@@ -435,22 +527,15 @@ server <- function(input, output, session) {
                      "#AD176E", "","")
     
     # Create a kableExtra table
-    kable(bench, "html", escape = FALSE, col.names = c("Step", "Benchmark", "Numerator", "Denominator"), table.attr = "style='width:50%;'") %>%
-      kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
-      row_spec(0, background = "#00A14C", color = "white") %>%  # Header row styling
-      column_spec(1, extra_css = "text-align: center;", background = step_colors, color = "white", width = "10px") %>%
-      column_spec(2, extra_css = "text-align: center;", width = "10px") %>%
-      column_spec(3, width = "500px") %>%
-      column_spec(4, width = "350px") %>%
-      collapse_rows(columns = 1, valign = "middle") #%>%  # Merge cells for "Step"
-      # Apply background colors to the merged cells of "Step"
-  #     row_spec(1:6, background = "#064871", color = "white") %>%  # Color for Step 1
-  #     row_spec(7:10, background = "#DA471F", color = "white") %>%  # Color for Step 2
-  #     row_spec(11:16, background = "#0096B3", color = "white") %>%  # Color for Step 3
-  #     row_spec(17:19, background = "#AD176E", color = "white")  # Color for Step 4
-      
+    kable(bench, "html", escape = FALSE, col.names = c("Step", "Benchmark", "Numerator", "Denominator"), table.attr = "style='width:50%;'") |>
+      kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) |>
+      row_spec(0, background = "#00A14C", color = "white") |>  # Header row styling
+      column_spec(1, extra_css = "text-align: center;", background = step_colors, color = "white", width = "10px") |>
+      column_spec(2, extra_css = "text-align: center;", width = "10px") |>
+      column_spec(3, width = "500px") |>
+      column_spec(4, width = "350px") |>
+      collapse_rows(columns = 1, valign = "middle") #|>  # Merge cells for "Step"
   }
-  
   
 }  
 
