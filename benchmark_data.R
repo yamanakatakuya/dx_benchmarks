@@ -102,3 +102,5 @@ df <- str |>
     den_12 = m_wrd
     ) 
 
+  write.csv(df, here::here("./dx_benchmarks_rawdata.csv"), row.names = FALSE, na = "")
+  
